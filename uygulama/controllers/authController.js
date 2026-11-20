@@ -70,7 +70,15 @@ function cikisYap(req, res) {
     });
 }
 
+function kullaniciBilgisi(req, res) {
+    res.json({
+        durum: "Başarılı",
+        kullanici: req.session.kullanici
+    });
+}
+
 module.exports = {
     girisYap,
-    cikisYap
+    cikisYap,
+    kullaniciBilgisi
 };

@@ -8,8 +8,10 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "connect-redis": "^10.0.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
-    "mysql2": "^3.14.0"
+    "mysql2": "^3.14.0",
+    "redis": "^6.3.1"
   }
 }
