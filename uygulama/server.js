@@ -1,7 +1,7 @@
 const express = require("express");
 const session = require("express-session");
-const { createClient } = require("redis");
 const { RedisStore } = require("connect-redis");
+const redisClient = require("./config/redis");
 
 const saglikRoutes = require("./routes/saglikRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -15,19 +15,10 @@ const app = express();
 
 app.use(express.json());
 
-// Redis bağlantısı
-const redisClient = createClient({
-    url: `redis://${process.env.REDIS_HOST || "redis"}:${process.env.REDIS_PORT || 6379}`
-});
-
-redisClient.on("error", (error) => {
-    console.log("Redis bağlantı hatası:", error.message);
-});
-
 // Redis oturum deposu
 const redisStore = new RedisStore({
     client: redisClient,
-    prefix: "yemekhane:oturum:"
+    prefix: "oturum:"
 });
 
 // Oturum ayarları
@@ -36,6 +27,7 @@ app.use(session({
     secret: "yemekhane_otomasyonu_gizli_anahtar",
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
         httpOnly: true,
         maxAge: 30 * 60 * 1000

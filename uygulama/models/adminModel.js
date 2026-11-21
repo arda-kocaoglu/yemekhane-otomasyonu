@@ -113,7 +113,25 @@ async function menuGuncelle(menuId, menu) {
     try {
         await baglanti.beginTransaction();
 
-        const [sonuc] = await baglanti.query(
+        // Güncellemeden önce eski menü bilgilerini al
+        const [eskiMenuler] = await baglanti.query(
+            `SELECT
+                yemekhane_id,
+                DATE_FORMAT(tarih, '%Y-%m-%d') AS tarih,
+                ogun_id
+            FROM menuler
+            WHERE id = ?
+            FOR UPDATE`,
+            [menuId]
+        );
+
+        if (eskiMenuler.length === 0) {
+            throw new Error("Menü bulunamadı.");
+        }
+
+        const eskiMenu = eskiMenuler[0];
+
+        await baglanti.query(
             `UPDATE menuler
             SET yemekhane_id = ?,
                 tarih = ?,
@@ -131,17 +149,6 @@ async function menuGuncelle(menuId, menu) {
             ]
         );
 
-        if (sonuc.affectedRows === 0) {
-            const [kontrol] = await baglanti.query(
-                "SELECT id FROM menuler WHERE id = ?",
-                [menuId]
-            );
-
-            if (kontrol.length === 0) {
-                throw new Error("Menü bulunamadı.");
-            }
-        }
-
         await baglanti.query(
             "DELETE FROM menu_yemekleri WHERE menu_id = ?",
             [menuId]
@@ -158,7 +165,7 @@ async function menuGuncelle(menuId, menu) {
 
         await baglanti.commit();
 
-        return menuId;
+        return eskiMenu;
 
     } catch (error) {
         await baglanti.rollback();

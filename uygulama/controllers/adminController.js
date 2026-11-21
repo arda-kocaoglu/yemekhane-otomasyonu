@@ -5,6 +5,8 @@ const {
     menuGuncelle
 } = require("../models/adminModel");
 
+const redisClient = require("../config/redis");
+
 // Kullanıcının yönetici olup olmadığını kontrol et
 function yoneticiMi(req, res) {
     if (!req.session.kullanici ||
@@ -121,6 +123,14 @@ async function menuOlusturController(req, res) {
             yemek_ids
         });
 
+        const anahtar =
+            `menu:${yemekhane_id}:${tarih}:${ogun_id}`;
+
+        const silinenKayitSayisi = await redisClient.del(anahtar);
+
+        console.log("Yeni menü önbelleği temizlendi:", anahtar);
+        console.log("Silinen Redis kayıt sayısı:", silinenKayitSayisi);
+
         res.status(201).json({
             durum: "Başarılı",
             mesaj: "Yeni menü oluşturuldu.",
@@ -185,7 +195,7 @@ async function menuGuncelleController(req, res) {
             });
         }
 
-        await menuGuncelle(menuId, {
+        const eskiMenu = await menuGuncelle(menuId, {
             yemekhane_id,
             tarih,
             ogun_id,
@@ -193,6 +203,25 @@ async function menuGuncelleController(req, res) {
             personel_fiyati,
             yemek_ids
         });
+
+        const eskiAnahtar =
+            `menu:${eskiMenu.yemekhane_id}:${eskiMenu.tarih}:${eskiMenu.ogun_id}`;
+
+        const yeniAnahtar =
+            `menu:${yemekhane_id}:${tarih}:${ogun_id}`;
+
+        // Aynı anahtarın iki kez gönderilmesini önle
+        const anahtarlar = [...new Set([eskiAnahtar, yeniAnahtar])];
+
+        const silinenKayitSayisi = await redisClient.del(anahtarlar);
+
+        console.log(
+            "Menü önbelleği temizlendi:",
+            eskiAnahtar,
+            yeniAnahtar
+        );
+
+        console.log("Silinen Redis kayıt sayısı:", silinenKayitSayisi);
 
         res.json({
             durum: "Başarılı",

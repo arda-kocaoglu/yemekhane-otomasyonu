@@ -1,4 +1,5 @@
 const menuModel = require("../models/menuModel");
+const redisClient = require("../config/redis");
 
 // Yemekhaneleri listele
 async function yemekhaneleriGetir(req, res) {
@@ -45,11 +46,38 @@ async function gununMenusuGetir(req, res) {
             });
         }
 
+        const anahtar = `menu:${yemekhaneId}:${tarih}:${ogunId}`;
+
+        // Önce Redis kontrol edilir
+        const kayitliMenu = await redisClient.get(anahtar);
+
+        if (kayitliMenu) {
+            console.log("Menü Redis'ten getirildi:", anahtar);
+
+            return res.json({
+                durum: "Başarılı",
+                menu: JSON.parse(kayitliMenu)
+            });
+        }
+
+        // Redis'te yoksa MySQL'den alınır
         const menu = await menuModel.gununMenusuGetir(
             yemekhaneId,
             tarih,
             ogunId
         );
+
+        // Önbellek süresi: ilgili günün sonuna kadar
+        const gunSonu = new Date(`${tarih}T23:59:59+03:00`);
+        const kalanSure = Math.floor((gunSonu.getTime() - Date.now()) / 1000);
+
+        if (kalanSure > 0) {
+            await redisClient.set(anahtar, JSON.stringify(menu), {
+                EX: kalanSure
+            });
+        }
+
+        console.log("Menü MySQL'den getirildi:", anahtar);
 
         res.json({
             durum: "Başarılı",
