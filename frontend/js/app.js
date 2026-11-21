@@ -82,6 +82,16 @@ function genelMesaj(mesaj, basarili = false) {
 function girisEkraniniGoster() {
     document.getElementById("giris-ekrani").hidden = false;
     document.getElementById("uygulama").hidden = true;
+
+    // Önceki sayfa seçimini temizle
+    document.querySelectorAll(".menu-link").forEach(link => {
+        link.classList.remove("aktif");
+    });
+
+    document.querySelectorAll(".sayfa").forEach(sayfa => {
+        sayfa.classList.remove("aktif");
+        sayfa.hidden = true;
+    });
 }
 
 // Ana uygulamayı göster
@@ -95,6 +105,29 @@ function uygulamayiGoster() {
     const adminMenu = document.getElementById("admin-menu-link");
 
     adminMenu.hidden = kullanici.rol !== "yonetici";
+
+    // Her girişte Günün Menüsü sayfasını aç
+    document.querySelectorAll(".menu-link").forEach(link => {
+        link.classList.remove("aktif");
+    });
+
+    document.querySelectorAll(".sayfa").forEach(sayfa => {
+        sayfa.classList.remove("aktif");
+        sayfa.hidden = true;
+    });
+
+    const gununMenusu = document.getElementById("gunun-menusu");
+
+    gununMenusu.hidden = false;
+    gununMenusu.classList.add("aktif");
+
+    const gununMenusuLinki = document.querySelector(
+        '.menu-link[data-sayfa="gunun-menusu"]'
+    );
+
+    if (gununMenusuLinki) {
+        gununMenusuLinki.classList.add("aktif");
+    }
 }
 
 // Giriş işlemi
@@ -144,6 +177,8 @@ document.getElementById("cikis-dugmesi").addEventListener("click", async functio
     }
 
     kullanici = null;
+    menuSecenekleri = null;
+    haftalikMenuler = [];
 
     girisEkraniniGoster();
 
@@ -322,9 +357,11 @@ function menuleriGrupla(satirlar) {
 
     satirlar.forEach(satir => {
         const id = satir.menu_id;
+
         if (!gruplar.has(id)) {
             gruplar.set(id, { ...satir, yemekler: [] });
         }
+
         if (satir.yemek) {
             gruplar.get(id).yemekler.push({
                 ad: satir.yemek,
@@ -352,8 +389,10 @@ function menuKartiOlustur(menu) {
         );
 
         yemekBilgisi = `<div class="menu-yemekler"><h4>Yemekler</h4><ul>`;
+
         menu.yemekler.forEach(yemek => {
             const vejetaryen = yemek.vejetaryen == 1 ? "Evet" : "Hayır";
+
             yemekBilgisi += `
                 <li>
                     <strong>${guvenliMetin(yemek.ad)}</strong>
@@ -362,6 +401,7 @@ function menuKartiOlustur(menu) {
                     - Alerjenler: ${guvenliMetin(yemek.alerjenler || "Belirtilmemiş")}
                 </li>`;
         });
+
         yemekBilgisi += `</ul><p><strong>Toplam kalori:</strong> ${toplamKalori} kcal</p></div>`;
     }
 
@@ -473,6 +513,7 @@ async function gununMenusunuGetir() {
     if (Array.from(yemekhaneAlani.options).some(o => o.value === secilenYemekhane)) {
         yemekhaneAlani.value = secilenYemekhane;
     }
+
     if (Array.from(ogunAlani.options).some(o => o.value === secilenOgun)) {
         ogunAlani.value = secilenOgun;
     }
@@ -486,9 +527,11 @@ async function gununMenusunuGetir() {
     }
 
     const parametreler = new URLSearchParams({ yemekhaneId, tarih, ogunId });
+
     const veri = await apiIstegi(
         "/menu/gunun-menusu?" + parametreler.toString()
     );
+
     const gunlukMenuler = menuleriGrupla(veri.menu || []);
 
     if (gunlukMenuler.length === 0) {
@@ -520,7 +563,6 @@ document.getElementById("gunluk-menu-getir").addEventListener("click", async fun
         }
     });
 });
-
 
 // Haftalık menü
 async function haftalikMenuGetir() {
@@ -1049,7 +1091,7 @@ async function anaVerileriYukle() {
     }
 }
 
- // Sayfa yenilendiğinde oturumu kontrol et
+// Sayfa yenilendiğinde oturumu kontrol et
 async function oturumuKontrolEt() {
     try {
         const veri = await apiIstegi("/auth/profil");
