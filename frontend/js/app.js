@@ -993,7 +993,7 @@ async function profilBilgileriniYukle() {
     return veri;
 }
 
-// Profil sayfasını getir
+ // Profil sayfasını getir
 async function profilSayfasiniGetir() {
     await profilBilgileriniYukle();
 
@@ -1010,14 +1010,14 @@ async function profilSayfasiniGetir() {
         );
 
         return `
-            <label style="display:block;margin:12px 0;cursor:pointer;">
+            <label class="alerjen-secenegi">
                 <input
                     type="checkbox"
                     class="profil-alerjen"
                     value="${Number(alerjen.id)}"
                     ${secili ? "checked" : ""}
                 >
-                ${guvenliMetin(alerjen.ad)}
+                <span>${guvenliMetin(alerjen.ad)}</span>
             </label>
         `;
     }).join("");

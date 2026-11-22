@@ -790,3 +790,34 @@ tbody tr:hover {
         transition: none !important;
     }
 }
+
+/* Profil alerjen seceneklerinin duzeni */
+
+#profil-alerjen-listesi .alerjen-secenegi {
+    display: flex !important;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    margin: 0 0 14px;
+    cursor: pointer;
+}
+
+#profil-alerjen-listesi .alerjen-secenegi input[type="checkbox"] {
+    display: inline-block;
+    width: 18px !important;
+    height: 18px !important;
+    min-height: 0 !important;
+    flex: 0 0 18px;
+    margin: 0 !important;
+    padding: 0 !important;
+    accent-color: var(--ana);
+}
+
+#profil-alerjen-listesi .alerjen-secenegi span {
+    display: inline;
+    width: auto;
+    margin: 0;
+    font-weight: 600;
+}
