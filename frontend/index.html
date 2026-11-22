@@ -95,6 +95,10 @@
                     Değerlendirme
                 </button>
 
+                <button class="menu-link" data-sayfa="profilim">
+                    Profilim
+                </button>
+
                 <button
                     id="admin-menu-link"
                     class="menu-link"
@@ -226,13 +230,14 @@
                                         <th>Öğün</th>
                                         <th>Durum</th>
                                         <th>Ücret</th>
+                                        <th>Porsiyon</th>
                                         <th>İşlem</th>
                                     </tr>
                                 </thead>
 
                                 <tbody id="rezervasyon-listesi">
                                     <tr>
-                                        <td colspan="7">
+                                        <td colspan="8">
                                             Rezervasyonlar yükleniyor...
                                         </td>
                                     </tr>
@@ -371,6 +376,43 @@
                             id="degerlendirmeler-listesi"
                             aria-live="polite"
                         ></div>
+                    </div>
+
+                </section>
+
+                <!-- Profilim -->
+                <section id="profilim" class="sayfa" hidden>
+
+                    <div class="sayfa-baslik">
+                        <h2>Profilim</h2>
+                        <p>Alerjen tercihlerinizi buradan belirleyebilirsiniz.</p>
+                    </div>
+
+                    <div class="kart">
+                        <h3>Alerjen Tercihlerim</h3>
+
+                        <p>
+                            Seçtiğiniz alerjenleri içeren yemekler
+                            menüde uyarıyla gösterilir.
+                        </p>
+
+                        <form id="profil-alerjen-form">
+
+                            <div
+                                id="profil-alerjen-listesi"
+                                class="form-grup"
+                                aria-live="polite"
+                            >
+                                Alerjenler yükleniyor...
+                            </div>
+
+                            <button type="submit" class="dugme">
+                                Tercihlerimi Kaydet
+                            </button>
+
+                        </form>
+
+                        <div id="profil-mesaj" aria-live="polite"></div>
                     </div>
 
                 </section>

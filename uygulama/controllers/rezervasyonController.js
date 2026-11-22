@@ -12,7 +12,7 @@ async function rezervasyonOlustur(req, res) {
             });
         }
 
-        const { menu_id } = req.body;
+        const { menu_id, porsiyon = "tam" } = req.body;
 
         if (!menu_id) {
             return res.status(400).json({
@@ -20,11 +20,18 @@ async function rezervasyonOlustur(req, res) {
             });
         }
 
+        if (porsiyon !== "tam" && porsiyon !== "yarim") {
+            return res.status(400).json({
+                mesaj: "Geçersiz porsiyon seçimi."
+            });
+        }
+
         const kullaniciId = req.session.kullanici.id;
 
         const sonuc = await rezervasyonYap(
             kullaniciId,
-            menu_id
+            menu_id,
+            porsiyon
         );
 
         res.json({

@@ -10,6 +10,7 @@ const rezervasyonRoutes = require("./routes/rezervasyonRoutes");
 const bakiyeRoutes = require("./routes/bakiyeRoutes");
 const degerlendirmeRoutes = require("./routes/degerlendirmeRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const profilRoutes = require("./routes/profilRoutes");
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/rezervasyon", rezervasyonRoutes);
 app.use("/api/bakiye", bakiyeRoutes);
 app.use("/api/degerlendirme", degerlendirmeRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/profil", profilRoutes);
 
 // Sunucuyu başlat
 const PORT = 8000;

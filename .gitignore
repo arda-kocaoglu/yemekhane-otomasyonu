@@ -11,3 +11,6 @@ obj/
 vendor/
 __pycache__/
 target/
+
+yemekhane_yedek.sql
+

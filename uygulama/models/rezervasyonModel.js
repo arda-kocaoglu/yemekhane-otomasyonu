@@ -1,9 +1,9 @@
 const { yazmaBaglantisi, okumaBaglantisi } = require("../config/db");
 
-async function rezervasyonYap(kullaniciId, menuId) {
+async function rezervasyonYap(kullaniciId, menuId, porsiyon) {
     const [sonuclar] = await yazmaBaglantisi.query(
-        "CALL sp_rezervasyon_yap(?, ?)",
-        [kullaniciId, menuId]
+        "CALL sp_rezervasyon_yap(?, ?, ?)",
+        [kullaniciId, menuId, porsiyon]
     );
 
     return sonuclar[0][0];
@@ -19,6 +19,7 @@ async function rezervasyonlarimiGetir(kullaniciId) {
             m.tarih,
             r.durum,
             r.ucret,
+            r.porsiyon,
             TIMESTAMP(m.tarih, o.son_saat) AS rezervasyon_son,
             CASE
                 WHEN r.durum = 'aktif'

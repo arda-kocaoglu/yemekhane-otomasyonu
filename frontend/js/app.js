@@ -3,6 +3,8 @@ const API = "/api";
 let kullanici = null;
 let menuSecenekleri = null;
 let haftalikMenuler = [];
+let seciliAlerjenler = [];
+let tumAlerjenler = [];
 
 // API istekleri
 async function apiIstegi(url, secenekler = {}) {
@@ -83,7 +85,6 @@ function girisEkraniniGoster() {
     document.getElementById("giris-ekrani").hidden = false;
     document.getElementById("uygulama").hidden = true;
 
-    // Önceki sayfa seçimini temizle
     document.querySelectorAll(".menu-link").forEach(link => {
         link.classList.remove("aktif");
     });
@@ -106,7 +107,6 @@ function uygulamayiGoster() {
 
     adminMenu.hidden = kullanici.rol !== "yonetici";
 
-    // Her girişte Günün Menüsü sayfasını aç
     document.querySelectorAll(".menu-link").forEach(link => {
         link.classList.remove("aktif");
     });
@@ -179,6 +179,8 @@ document.getElementById("cikis-dugmesi").addEventListener("click", async functio
     kullanici = null;
     menuSecenekleri = null;
     haftalikMenuler = [];
+    seciliAlerjenler = [];
+    tumAlerjenler = [];
 
     girisEkraniniGoster();
 
@@ -230,6 +232,10 @@ document.querySelectorAll(".menu-link").forEach(dugme => {
 
             if (sayfaAdi === "degerlendirme") {
                 await degerlendirmeSayfasiniGetir();
+            }
+
+            if (sayfaAdi === "profilim") {
+                await profilSayfasiniGetir();
             }
 
             if (sayfaAdi === "yonetici-paneli") {
@@ -351,7 +357,7 @@ function ogunleriDoldur(elemanId, menuler) {
     }
 }
 
-// Günlük menüdeki yemek satırlarını menülere göre grupla
+// Günlük menüdeki yemek satırlarını grupla
 function menuleriGrupla(satirlar) {
     const gruplar = new Map();
 
@@ -367,12 +373,58 @@ function menuleriGrupla(satirlar) {
                 ad: satir.yemek,
                 kalori: satir.kalori,
                 vejetaryen: satir.vejetaryen,
-                alerjenler: satir.alerjenler
+                alerjenler: satir.alerjenler,
+                alerjen_idler: satir.alerjen_idler
             });
         }
     });
 
     return Array.from(gruplar.values());
+}
+
+// Kullanıcının alerjenleriyle eşleşen yemekleri bul
+function yemekAlerjenUyarisi(yemek) {
+    if (seciliAlerjenler.length === 0) {
+        return "";
+    }
+
+    const yemekAlerjenIdleri = String(
+        yemek.alerjen_idler || ""
+    )
+        .split(",")
+        .filter(id => id !== "")
+        .map(Number);
+
+    const eslesenler = seciliAlerjenler.filter(id =>
+        yemekAlerjenIdleri.includes(Number(id))
+    );
+
+    if (eslesenler.length === 0) {
+        return "";
+    }
+
+    const adlar = eslesenler.map(id => {
+        const alerjen = tumAlerjenler.find(a =>
+            Number(a.id) === Number(id)
+        );
+
+        return alerjen ? alerjen.ad : "Alerjen";
+    });
+
+    return `
+        <p style="color:#b42318;font-weight:bold;margin:6px 0;">
+            ⚠ Alerjen Uyarısı: ${guvenliMetin(adlar.join(", "))}
+        </p>
+    `;
+}
+
+// Kullanıcının rolüne göre tam porsiyon fiyatı
+function menuFiyatiniBul(menu) {
+    if (kullanici.rol === "personel") {
+        return Number(menu.personel_fiyati || 0);
+    }
+
+    return Number(menu.ogrenci_fiyati || 0);
 }
 
 // Menü kartını oluştur
@@ -381,6 +433,13 @@ function menuKartiOlustur(menu) {
     const doluluk = Number(menu.doluluk_yuzde || 0);
     const bosYer = Number(menu.bos_yer || 0);
 
+    const kahvaltiMi = String(menu.ogun || "")
+        .toLocaleLowerCase("tr-TR")
+        .includes("kahvaltı");
+
+    const tamFiyat = menuFiyatiniBul(menu);
+    const yarimFiyat = Math.round(tamFiyat * 60) / 100;
+
     let yemekBilgisi = "";
 
     if (Array.isArray(menu.yemekler) && menu.yemekler.length > 0) {
@@ -388,7 +447,7 @@ function menuKartiOlustur(menu) {
             (toplam, yemek) => toplam + Number(yemek.kalori || 0), 0
         );
 
-        yemekBilgisi = `<div class="menu-yemekler"><h4>Yemekler</h4><ul>`;
+        yemekBilgisi = '<div class="menu-yemekler"><h4>Yemekler</h4><ul>';
 
         menu.yemekler.forEach(yemek => {
             const vejetaryen = yemek.vejetaryen == 1 ? "Evet" : "Hayır";
@@ -398,11 +457,18 @@ function menuKartiOlustur(menu) {
                     <strong>${guvenliMetin(yemek.ad)}</strong>
                     - ${guvenliMetin(yemek.kalori ?? "-")} kcal
                     - Vejetaryen: ${vejetaryen}
-                    - Alerjenler: ${guvenliMetin(yemek.alerjenler || "Belirtilmemiş")}
-                </li>`;
+                    - Alerjenler:
+                    ${guvenliMetin(yemek.alerjenler || "Belirtilmemiş")}
+                    ${yemekAlerjenUyarisi(yemek)}
+                </li>
+            `;
         });
 
-        yemekBilgisi += `</ul><p><strong>Toplam kalori:</strong> ${toplamKalori} kcal</p></div>`;
+        yemekBilgisi += `
+            </ul>
+            <p><strong>Toplam kalori:</strong> ${toplamKalori} kcal</p>
+            </div>
+        `;
     }
 
     let fiyatBilgisi = "";
@@ -428,6 +494,36 @@ function menuKartiOlustur(menu) {
         `;
     }
 
+    const porsiyonAlani = kullanici.rol !== "yonetici" ? `
+        <div class="form-grup">
+            <label for="porsiyon-${menu.menu_id}">
+                Porsiyon Seçimi
+            </label>
+
+            <select
+                id="porsiyon-${menu.menu_id}"
+                class="porsiyon-secimi"
+                data-menu-id="${menu.menu_id}"
+            >
+                <option value="tam">
+                    Tam Porsiyon - ${paraBicimi(tamFiyat)}
+                </option>
+
+                ${kahvaltiMi ? "" : `
+                    <option value="yarim">
+                        Yarım Porsiyon - ${paraBicimi(yarimFiyat)}
+                    </option>
+                `}
+            </select>
+
+            ${kahvaltiMi ? `
+                <small>Kahvaltıda yalnızca tam porsiyon seçilebilir.</small>
+            ` : `
+                <small>Yarım porsiyon, tam fiyatın %60'ıdır.</small>
+            `}
+        </div>
+    ` : "";
+
     return `
         <div class="kart menu-karti">
             <h3>${guvenliMetin(menu.yemekhane)}</h3>
@@ -448,6 +544,8 @@ function menuKartiOlustur(menu) {
             ${fiyatBilgisi}
 
             ${kullanici.rol !== "yonetici" ? `
+                ${porsiyonAlani}
+
                 <button
                     class="dugme rezervasyon-yap"
                     data-menu-id="${menu.menu_id}"
@@ -466,7 +564,22 @@ function rezervasyonButonlariniBagla() {
         dugme.addEventListener("click", async function() {
             const menuId = Number(this.dataset.menuId);
 
-            if (!confirm("Bu menü için rezervasyon yapmak istiyor musunuz?")) {
+            const porsiyonAlani = document.getElementById(
+                "porsiyon-" + menuId
+            );
+
+            const porsiyon = porsiyonAlani
+                ? porsiyonAlani.value
+                : "tam";
+
+            const porsiyonAdi = porsiyon === "yarim"
+                ? "yarım porsiyon"
+                : "tam porsiyon";
+
+            if (!confirm(
+                "Bu menü için " + porsiyonAdi +
+                " rezervasyonu yapmak istiyor musunuz?"
+            )) {
                 return;
             }
 
@@ -474,7 +587,8 @@ function rezervasyonButonlariniBagla() {
                 const veri = await apiIstegi("/rezervasyon/olustur", {
                     method: "POST",
                     body: JSON.stringify({
-                        menu_id: menuId
+                        menu_id: menuId,
+                        porsiyon: porsiyon
                     })
                 });
 
@@ -501,6 +615,7 @@ async function gununMenusunuGetir() {
 
     const yemekhaneAlani = document.getElementById("gunluk-yemekhane");
     const ogunAlani = document.getElementById("gunluk-ogun");
+
     const secilenYemekhane = yemekhaneAlani.value;
     const secilenOgun = ogunAlani.value;
 
@@ -510,11 +625,15 @@ async function gununMenusunuGetir() {
     yemekhaneleriDoldur("gunluk-yemekhane", menuler);
     ogunleriDoldur("gunluk-ogun", menuler);
 
-    if (Array.from(yemekhaneAlani.options).some(o => o.value === secilenYemekhane)) {
+    if (Array.from(yemekhaneAlani.options).some(o =>
+        o.value === secilenYemekhane
+    )) {
         yemekhaneAlani.value = secilenYemekhane;
     }
 
-    if (Array.from(ogunAlani.options).some(o => o.value === secilenOgun)) {
+    if (Array.from(ogunAlani.options).some(o =>
+        o.value === secilenOgun
+    )) {
         ogunAlani.value = secilenOgun;
     }
 
@@ -526,7 +645,11 @@ async function gununMenusunuGetir() {
         return;
     }
 
-    const parametreler = new URLSearchParams({ yemekhaneId, tarih, ogunId });
+    const parametreler = new URLSearchParams({
+        yemekhaneId,
+        tarih,
+        ogunId
+    });
 
     const veri = await apiIstegi(
         "/menu/gunun-menusu?" + parametreler.toString()
@@ -629,7 +752,7 @@ async function rezervasyonlarimiGetir() {
     if (rezervasyonlar.length === 0) {
         liste.innerHTML = `
             <tr>
-                <td colspan="7">Henüz rezervasyonunuz bulunmuyor.</td>
+                <td colspan="8">Henüz rezervasyonunuz bulunmuyor.</td>
             </tr>
         `;
         return;
@@ -637,6 +760,7 @@ async function rezervasyonlarimiGetir() {
 
     liste.innerHTML = rezervasyonlar.map(r => {
         const durum = String(r.durum || "").toLocaleLowerCase("tr-TR");
+
         let durumSinifi = "durum-aktif";
 
         if (durum.includes("kullan")) {
@@ -644,6 +768,10 @@ async function rezervasyonlarimiGetir() {
         } else if (durum.includes("iptal")) {
             durumSinifi = "durum-iptal";
         }
+
+        const porsiyonAdi = r.porsiyon === "yarim"
+            ? "Yarım"
+            : "Tam";
 
         return `
             <tr>
@@ -657,6 +785,7 @@ async function rezervasyonlarimiGetir() {
                     </span>
                 </td>
                 <td>${paraBicimi(r.ucret)}</td>
+                <td>${porsiyonAdi}</td>
                 <td>
                     ${Number(r.iptal_edilebilir) === 1 ? `
                         <button
@@ -854,6 +983,79 @@ document.getElementById("degerlendirme-form").addEventListener("submit", async f
     }
 });
 
+// Profil bilgilerini getir
+async function profilBilgileriniYukle() {
+    const veri = await apiIstegi("/profil");
+
+    tumAlerjenler = veri.alerjenler || [];
+    seciliAlerjenler = veri.secili_alerjenler || [];
+
+    return veri;
+}
+
+// Profil sayfasını getir
+async function profilSayfasiniGetir() {
+    await profilBilgileriniYukle();
+
+    const liste = document.getElementById("profil-alerjen-listesi");
+
+    if (tumAlerjenler.length === 0) {
+        liste.innerHTML = "<p>Alerjen kaydı bulunamadı.</p>";
+        return;
+    }
+
+    liste.innerHTML = tumAlerjenler.map(alerjen => {
+        const secili = seciliAlerjenler.some(id =>
+            Number(id) === Number(alerjen.id)
+        );
+
+        return `
+            <label style="display:block;margin:12px 0;cursor:pointer;">
+                <input
+                    type="checkbox"
+                    class="profil-alerjen"
+                    value="${Number(alerjen.id)}"
+                    ${secili ? "checked" : ""}
+                >
+                ${guvenliMetin(alerjen.ad)}
+            </label>
+        `;
+    }).join("");
+
+    const mesaj = document.getElementById("profil-mesaj");
+    mesaj.textContent = "";
+    mesaj.className = "";
+}
+
+// Alerjen tercihlerini kaydet
+document.getElementById("profil-alerjen-form").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const alerjenIdler = Array.from(
+        document.querySelectorAll(".profil-alerjen:checked")
+    ).map(alan => Number(alan.value));
+
+    try {
+        const veri = await apiIstegi("/profil/alerjenler", {
+            method: "PUT",
+            body: JSON.stringify({
+                alerjen_idler: alerjenIdler
+            })
+        });
+
+        seciliAlerjenler = alerjenIdler;
+
+        bildirimGoster(
+            "profil-mesaj",
+            veri.mesaj || "Alerjen tercihleriniz kaydedildi.",
+            true
+        );
+
+    } catch (error) {
+        bildirimGoster("profil-mesaj", error.message);
+    }
+});
+
 // Yönetici seçeneklerini getir
 async function adminSecenekleriniGetir() {
     const veri = await apiIstegi("/admin/secenekler");
@@ -996,7 +1198,6 @@ function menuDuzenlemeAlanlariniDoldur(menuId, menuler) {
     document.getElementById("admin-personel-fiyati").value =
         menu.personel_fiyati;
 
-    // Menüye ait mevcut yemekleri seç
     const yemekIds = menu.yemek_ids
         ? String(menu.yemek_ids).split(",").map(Number)
         : [];
@@ -1083,6 +1284,9 @@ async function yoneticiPaneliniGetir() {
 // İlk yüklemede gerekli verileri getir
 async function anaVerileriYukle() {
     tarihleriHazirla();
+
+    // Alerjenleri önce yükle ki menüde uyarılar gösterilebilsin
+    await profilBilgileriniYukle();
 
     await gununMenusunuGetir();
 
