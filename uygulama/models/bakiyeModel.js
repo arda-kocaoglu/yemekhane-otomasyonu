@@ -2,7 +2,7 @@ const { yazmaBaglantisi, okumaBaglantisi } = require("../config/db");
 
 // Kullanıcının güncel bakiyesini getir
 async function bakiyeGetir(kullaniciId) {
-    const [sonuclar] = await okumaBaglantisi.query(
+    const [sonuclar] = await yazmaBaglantisi.query(
         "SELECT bakiye FROM kullanicilar WHERE id = ?",
         [kullaniciId]
     );

@@ -433,6 +433,22 @@ function menuKartiOlustur(menu) {
     const doluluk = Number(menu.doluluk_yuzde || 0);
     const bosYer = Number(menu.bos_yer || 0);
 
+    // Rezervasyon son saatini kontrol et
+    const sonSaatMetni = String(menu.rezervasyon_son || "")
+        .replace(" ", "T");
+
+    const sonSaat = sonSaatMetni
+        ? new Date(sonSaatMetni + (
+            /[zZ]|[+-]\d\d:\d\d$/.test(sonSaatMetni) ? "" : "+03:00"
+        ))
+        : null;
+
+    const sureDoldu = sonSaat instanceof Date
+        && !isNaN(sonSaat.getTime())
+        && Date.now() >= sonSaat.getTime();
+
+    const rezervasyonKapali = bosYer <= 0 || sureDoldu;
+
     const kahvaltiMi = String(menu.ogun || "")
         .toLocaleLowerCase("tr-TR")
         .includes("kahvaltı");
@@ -549,9 +565,13 @@ function menuKartiOlustur(menu) {
                 <button
                     class="dugme rezervasyon-yap"
                     data-menu-id="${menu.menu_id}"
-                    ${bosYer <= 0 ? "disabled" : ""}
+                    ${rezervasyonKapali ? "disabled" : ""}
                 >
-                    ${bosYer <= 0 ? "Kontenjan Doldu" : "Rezervasyon Yap"}
+                    ${bosYer <= 0
+                        ? "Kontenjan Doldu"
+                        : sureDoldu
+                            ? "Rezervasyon Süresi Doldu"
+                            : "Rezervasyon Yap"}
                 </button>
             ` : ""}
         </div>
